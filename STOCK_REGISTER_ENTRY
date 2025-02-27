@@ -1,0 +1,108 @@
+*&---------------------------------------------------------------------*
+*& Report ZON_STOK_LIST
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZON_STOK_LIST.
+
+TABLES ZON_STOK_LIST.
+
+DATA: GV_ID TYPE Z_STOCK_ID,
+      GV_NAME TYPE Z_STOCK_NAME,
+      GV_QTY TYPE Z_STOCK_QTY,
+      GV_LOC TYPE Z_STOCK_LOC,
+      GV_PRC TYPE Z_STOCK_PRICE,
+      GV_COST TYPE Z_STOCK_COST,
+      GV_SELL TYPE Z_STOCK_SELL,
+      GV_DIV TYPE Z_STOCK_DIV,
+      GV_TYP TYPE Z_STOCK_TYP,
+      GV_PRD TYPE Z_STOCK_PRD,
+      GV_SOLD TYPE Z_STOCK_SOLD,
+      GV_SALE TYPE Z_STOCK_SALE.
+
+DATA: GT_LOG TYPE TABLE OF ZON_STOK_LIST,
+      GS_LOG TYPE ZON_STOK_LIST.
+
+*DATA: GV_DRP TYPE VRM_ID,
+*      GT_VALUES TYPE VRM_VALUES,
+*      GS_VALUE TYPE VRM_VALUE.
+
+
+
+START-OF-SELECTION.
+CALL SCREEN 0100.
+
+
+
+
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE STATUS_0100 OUTPUT.
+  SET PF-STATUS '0100'.
+*  SET TITLEBAR 'xxx'.
+*GV_DRP = 'GV_LOC'.
+*GS_VALUE-KEY = '1'.
+*GS_VALUE-TEXT = 'ASY'.
+*APPEND GS_VALUE TO GT_VALUES.
+*GS_VALUE-KEY = '2'.
+*GS_VALUE-TEXT = 'AVR'.
+*APPEND GS_VALUE TO GT_VALUES.
+*GS_VALUE-KEY = '3'.
+*GS_VALUE-TEXT = 'MRK'.
+*APPEND GS_VALUE TO GT_VALUES.
+*
+*
+*
+*  CALL FUNCTION 'VRM_SET_VALUES'
+*    EXPORTING
+*      ID                    = GV_DRP
+*      VALUES                = GT_VALUES.
+
+**
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE USER_COMMAND_0100 INPUT.
+
+CASE SY-UCOMM.
+  WHEN '&BACK'.
+    LEAVE TO SCREEN 0.
+  WHEN '&CLEAR'.
+    CLEAR: GV_ID,
+      GV_NAME,
+      GV_QTY,
+      GV_LOC,
+      GV_PRC,
+      GV_COST,
+      GV_SELL,
+      GV_DIV,
+      GV_TYP,
+      GV_PRD,
+      GV_SOLD,
+      GV_SALE.
+    MESSAGE 'Giri#ler Temizlendi' Type 'S' DISPLAY LIKE 'E'.
+   WHEN '&SAVE'.
+     GS_LOG-STOCK_ID = GV_ID.
+     GS_LOG-STOCK_NAME = GV_NAME.
+     GS_LOG-STOCK_QTY = GV_QTY.
+     GS_LOG-STOCK_LOC = GV_LOC.
+     GS_LOG-STOCK_PRICE = GV_PRC.
+     GS_LOG-STOCK_COST = GV_COST.
+     GS_LOG-STOCK_SELL = GV_SELL.
+     GS_LOG-STOCK_DIV = GV_DIV.
+     GS_LOG-STOCK_TYP = GV_TYP.
+     GS_LOG-STOCK_PRD = GV_PRD.
+     GS_LOG-STOCK_SOLD = GV_SOLD.
+     GS_LOG-STOCK_SALE = GV_SALE.
+     INSERT ZON_STOK_LIST FROM GS_LOG.
+     COMMIT WORK AND WAIT.
+
+     MESSAGE 'Veriler Tabloya Kaydedildi.' TYPE 'I' DISPLAY LIKE 'S'.
+  ENDCASE.
+ENDMODULE.
