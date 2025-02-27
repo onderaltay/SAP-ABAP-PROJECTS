@@ -1,0 +1,25 @@
+*&---------------------------------------------------------------------*
+*& Report ZON_OOALV_1
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZON_OOALV_1.
+
+"#LK OLARAK B#R SCREEN OLU#TURUYORUZ VE LAYOUT KISMINDAN CONTAINER KOYUYORUZ.
+
+INCLUDE ZON_OOALV_1_TOP.  " tüm datalar# buraya yaz#yoruz
+INCLUDE ZON_OOALV_1_CLS.  " class burada
+INCLUDE ZON_OOALV_1_PBO.  " ekran gelmeden önceki i#lemler burada
+INCLUDE ZON_OOALV_1_PAI.  " kullan#c# herhangi bir t#klama yapt###ndaki i#lemelr burada
+INCLUDE ZON_OOALV_1_FRM.  " perform edilecek formlar burada
+
+
+START-OF-SELECTION.
+*ALV #LE #LG#L# ##LEMLER# EKRANI ÇA#IRMADAN ÖNCE YAPIYORUZ DISPLAY METHODUMUZU PBO #Ç#NE YAZIYORUZ.
+* GET_DATA FORMUYLA SQL KODU KULLANARAK TABLOMUZU ÇA#IRIYORUZ.
+
+PERFORM GET_DATA. " burada SQL kodu ile tabloyu çekicez ve tablo ile alakal# i#lemleri yapaca##z.
+PERFORM SET_FCAT. " tablomuza burada biçim verece#iz.
+PERFORM SET_LAYOUT. " tablo görünü#üne buradan müdahale edece#iz.
+
+CALL SCREEN 0100.

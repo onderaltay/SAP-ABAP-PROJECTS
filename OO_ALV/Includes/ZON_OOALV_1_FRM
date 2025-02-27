@@ -1,0 +1,392 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZON_OOALV_1_FRM
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM DISPLAY_ALV .
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
+  IF GO_ALV IS INITIAL.  "ALTTA 2 TANE GO_ALV METHODU YAZDI#IMIZ #Ç#N, KARI#MASIN D#YE IF #LE 2'YE AYIRIYORUZ.
+  "CONTAINER KOYDUK DISPLAY'E TANIMLIYORUZ
+CREATE OBJECT GO_CONT      "CONTAINER #Ç#N OBJE ÇA#IRIYORUZ
+  EXPORTING
+    CONTAINER_NAME    = 'CC_ALV'.
+
+
+CREATE OBJECT GO_ALV       "ALV #Ç#N OBJE ÇA#IRIYORUZ
+  EXPORTING
+    I_PARENT          = GO_CONT.
+
+CREATE OBJECT GO_EVENT_RECEIVER.
+SET HANDLER GO_EVENT_RECEIVER->HANDLE_DATA_CHANGED FOR GO_ALV.
+
+PERFORM SET_DROPDOWN.      "DROPDOWN #Ç#N FORM YAZACA#IZ.
+
+***** DISPLAY #Ç#N ALANIMIZ *****
+CALL METHOD GO_ALV->SET_TABLE_FOR_FIRST_DISPLAY
+  EXPORTING
+     IS_LAYOUT                     = GS_LAYOUT
+  CHANGING
+    IT_OUTTAB                     =     GT_STOCK[]
+    IT_FIELDCATALOG               =     GT_FCAT .
+
+"DE####KL#KLER# BUFFERDA TOPLAMA #EKL#
+CALL METHOD GO_ALV->REGISTER_EDIT_EVENT
+  EXPORTING
+*    I_EVENT_ID =     CL_GUI_ALV_GRID=>MC_EVT_ENTER.  " ENTER'A BASTI#IMDA DE####KL#KLER# ALGILASIN.
+    I_EVENT_ID =     CL_GUI_ALV_GRID=>MC_EVT_MODIFIED." DE####R#LD### ANDA ALGILASIN ENTERA BASMAYA GEREK YOK.
+
+ELSE.
+CALL METHOD GO_ALV->REFRESH_TABLE_DISPLAY.             " ICONU TABLOYA BASMAK #Ç#N REFRESH ED#YORUZ.
+
+ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM GET_DATA .
+
+ "-------TABLOMUZU ÇEK#YORUZ------
+  CLEAR GT_STOCK.
+SELECT * FROM ZON_STOK_LIST
+  INTO CORRESPONDING FIELDS OF TABLE GT_STOCK.
+
+"--------KDV DAH#L KOLONU #Ç#N FORMÜLÜMÜZ---------
+  LOOP AT GT_STOCK ASSIGNING <GFS_STOCK>.
+    <GFS_STOCK>-KDV_DAHIL = <GFS_STOCK>-STOCK_SELL * ( 120 / 100 ).
+*    <GFS_STOCK>-DURUM = '@0D@'.  "DURUM KOLONUNA ICON VER#R
+   ENDLOOP.
+
+ "-------ICON YARATMAK #Ç#N------------
+  DATA: LV_TOTAL TYPE INT4.
+  DATA: LV_LINES TYPE INT4.
+  DATA: LV_AVR TYPE INT4.
+  LOOP AT GT_STOCK INTO GS_STOCK .
+    LV_TOTAL = LV_TOTAL + GS_STOCK-STOCK_SELL.
+  ENDLOOP.
+ DESCRIBE TABLE GT_STOCK LINES LV_LINES.  " SATIRLARI SAYDIRDIK
+ LV_AVR = LV_TOTAL / LV_LINES.            " SAYDIRDI#IMIZ SATIRLARIN ORTALAMASINI ALDIK.
+
+ LOOP AT GT_STOCK ASSIGNING <GFS_STOCK>.
+   IF <GFS_STOCK>-STOCK_SELL > LV_AVR.     " F#YATI ORTALAMADAN YÜKSEK ÜRÜNLER YE##L YANACAK
+     <GFS_STOCK>-DURUM = '@08@'.
+   ELSEIF <GFS_STOCK>-STOCK_SELL < LV_AVR. " F#YATI ORTALAMADAN DÜ#ÜK ÜRÜNLER KIRMIZI YANACAK
+     <GFS_STOCK>-DURUM = '@0A@'.
+   ELSE.                                   " F#YATI ORTALAMA ÜRÜNLER SARI YANACAK
+     <GFS_STOCK>-DURUM = '@09@'.
+   ENDIF.
+ENDLOOP.
+
+*---------DROPDOWN GRUPLANDIRMASI #Ç#N----- #uan aktif olmayacak data changed fonksiyonu ile aktif olacak.
+LOOP AT GT_STOCK ASSIGNING <GFS_STOCK>.
+  IF <GFS_STOCK>-STOCK_SOLD = 0 .
+    <GFS_STOCK>-AKTIF = '1'.
+    <GFS_STOCK>-AKTIF = 'PAS#F'.
+  ELSEIF <GFS_STOCK>-STOCK_SOLD > 0 .
+    <GFS_STOCK>-AKTIF = '1'.
+    <GFS_STOCK>-AKTIF = 'AKT#F'.
+  ENDIF.
+ENDLOOP.
+LOOP AT GT_STOCK ASSIGNING <GFS_STOCK>.
+  CASE <GFS_STOCK>-AKTIF.
+    WHEN 'AKT#F'.
+      <GFS_STOCK>-DD_HANDLE = '2'.
+      <GFS_STOCK>-SEBEP = 'Çok Sat#lan'.
+    WHEN 'PAS#F'.
+      <GFS_STOCK>-DD_HANDLE = '3'.
+      <GFS_STOCK>-SEBEP = 'Hiç Sat#lmayan'.
+  ENDCASE.
+  ENDLOOP.
+LOOP AT GT_STOCK ASSIGNING <GFS_STOCK>.
+  CASE <GFS_STOCK>-AKTIF.
+    WHEN 'AKT#F'.
+      <GFS_STOCK>-DEPO = '4'.
+      <GFS_STOCK>-DEPO = 'MRK'.
+    WHEN 'PAS#F'.
+      <GFS_STOCK>-DEPO = '4'.
+      <GFS_STOCK>-DEPO = 'ASY'.
+  ENDCASE.
+  ENDLOOP.
+
+" -------CELL STYLE VERMEK #Ç#N ---------
+ LOOP AT GT_STOCK ASSIGNING <GFS_STOCK>.
+   IF <GFS_STOCK>-STOCK_QTY = 0.
+     CLEAR: GS_CELL_STYLE.
+     GS_CELL_STYLE-FIELDNAME = 'AKTIF'.
+     GS_CELL_STYLE-STYLE     = CL_GUI_ALV_GRID=>MC_STYLE_ENABLED.  "KOLONU AKT#F DEAKT#F EDER CUSTOM #EK#LDE
+     GS_CELL_STYLE-STYLE     = '00000013'.                         "CUSTOM KOLONA STYLE VER#R.
+     APPEND GS_CELL_STYLE TO <GFS_STOCK>-CELL_STYLE.
+   ENDIF.
+ ENDLOOP.
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
+ "CELL VE LINE COLOR #Ç#N KODLAR
+*    CASE <GFS_STOCK>-STOCK_QTY.
+*      WHEN '0'.
+*        <GFS_STOCK>-LINE_COLOR = 'C710'.
+*    ENDCASE.
+*
+*    IF <GFS_STOCK>-STOCK_SELL < 100.
+*      CLEAR GS_CELL_COLOR.
+*      GS_CELL_COLOR-FNAME = 'STOCK_SELL'.
+*      GS_CELL_COLOR-COLOR-COL = '6'. " (Örnek: K#rm#z# için 6 kullan#ld#)
+*      GS_CELL_COLOR-COLOR-INT = '1'.
+*      GS_CELL_COLOR-COLOR-INV = '0'.
+*      APPEND GS_CELL_COLOR TO <GFS_STOCK>-CELL_COLOR.
+*    ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM SET_FCAT .
+CLEAR: GS_FCAT.
+GS_FCAT-FIELDNAME = 'DURUM'.
+GS_FCAT-SCRTEXT_S = 'Durum:'.
+GS_FCAT-SCRTEXT_M = 'Durum:'.
+GS_FCAT-SCRTEXT_L = 'Durum:'.
+GS_FCAT-COL_POS   = 1.
+GS_FCAT-COL_OPT   = ABAP_TRUE.
+APPEND GS_FCAT TO GT_FCAT.
+CLEAR: GS_FCAT.
+GS_FCAT-FIELDNAME = 'STOCK_ID'.
+GS_FCAT-SCRTEXT_S = 'Stk No:'.
+GS_FCAT-SCRTEXT_M = 'Stok Numaras#:'.
+GS_FCAT-SCRTEXT_L = 'Stok Numaras#:'.
+GS_FCAT-COL_POS   = 2.
+*GS_FCAT-COL_OPT   = ABAP_TRUE.
+GS_FCAT-HOTSPOT   = ABAP_TRUE.
+GS_FCAT-OUTPUTLEN = 10.
+APPEND GS_FCAT TO GT_FCAT.
+CLEAR: GS_FCAT.
+GS_FCAT-FIELDNAME = 'STOCK_NAME'.
+GS_FCAT-SCRTEXT_S = 'Stok Ad#:'.
+GS_FCAT-SCRTEXT_M = 'Stok Ad#:'.
+GS_FCAT-SCRTEXT_L = 'Stok Ad#:'.
+GS_FCAT-COL_POS   = 3.
+GS_FCAT-COL_OPT   = ABAP_TRUE.
+APPEND GS_FCAT TO GT_FCAT.
+CLEAR: GS_FCAT.
+GS_FCAT-FIELDNAME = 'STOCK_QTY'.
+GS_FCAT-SCRTEXT_S = 'Mktr:'.
+GS_FCAT-SCRTEXT_M = 'Stok Miktar#:'.
+GS_FCAT-SCRTEXT_L = 'Stok Miktar#:'.
+GS_FCAT-COL_POS   = 4.
+GS_FCAT-COL_OPT   = ABAP_TRUE.
+APPEND GS_FCAT TO GT_FCAT.
+CLEAR: GS_FCAT.
+GS_FCAT-FIELDNAME = 'STOCK_SELL'.
+GS_FCAT-REF_TABLE = 'ZON_STOK_LIST'.
+GS_FCAT-REF_FIELD = 'STOCK_SELL'.
+*GS_FCAT-SCRTEXT_S = 'Fiyat:'.
+*GS_FCAT-SCRTEXT_M = 'Sat## Fiyat#:'.
+*GS_FCAT-SCRTEXT_L = 'Sat## Fiyat#:'.
+GS_FCAT-COL_POS   = 5.
+*GS_FCAT-COL_OPT   = ABAP_TRUE.
+APPEND GS_FCAT TO GT_FCAT.
+CLEAR: GS_FCAT.
+GS_FCAT-FIELDNAME = 'KDV_DAHIL'.
+GS_FCAT-SCRTEXT_S = 'KDV Dahil:'.
+GS_FCAT-SCRTEXT_M = 'KDV Dahil:'.
+GS_FCAT-SCRTEXT_L = 'KDV Dahil:'.
+GS_FCAT-COL_POS   = 6.
+APPEND GS_FCAT TO GT_FCAT.
+CLEAR: GS_FCAT.
+GS_FCAT-FIELDNAME = 'AKTIF'.
+GS_FCAT-SCRTEXT_S = 'Aktiflik:'.
+GS_FCAT-SCRTEXT_M = 'Aktiflik:'.
+GS_FCAT-SCRTEXT_L = 'Aktiflik:'.
+GS_FCAT-COL_POS   = 8.
+GS_FCAT-COL_OPT   = ABAP_TRUE.
+GS_FCAT-EDIT      = ABAP_TRUE.
+GS_FCAT-DRDN_HNDL = 1.
+APPEND GS_FCAT TO GT_FCAT.
+CLEAR: GS_FCAT.
+GS_FCAT-FIELDNAME = 'SEBEP'.
+GS_FCAT-SCRTEXT_S = 'Sebebi:'.
+GS_FCAT-SCRTEXT_M = 'Sebebi:'.
+GS_FCAT-SCRTEXT_L = 'Sebebi:'.
+GS_FCAT-COL_POS   = 9.
+GS_FCAT-COL_OPT   = ABAP_TRUE.
+GS_FCAT-EDIT      = ABAP_TRUE.
+GS_FCAT-DRDN_FIELD = 'DD_HANDLE'.
+APPEND GS_FCAT TO GT_FCAT.
+CLEAR: GS_FCAT.
+GS_FCAT-FIELDNAME = 'DEPO'.
+GS_FCAT-SCRTEXT_S = 'Konumu:'.
+GS_FCAT-SCRTEXT_M = 'Konumu:'.
+GS_FCAT-SCRTEXT_L = 'Konumu:'.
+GS_FCAT-COL_POS   = 10.
+GS_FCAT-COL_OPT   = ABAP_TRUE.
+GS_FCAT-EDIT      = ABAP_TRUE.
+GS_FCAT-DRDN_HNDL = 4.
+APPEND GS_FCAT TO GT_FCAT.
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+"MERGE MANTI#I #LE FIELD CATALOG YARATMAK.
+
+*CLEAR GT_FCAT.
+*
+*APPEND VALUE #( FIELDNAME = 'STOCK_ID'   COLTEXT = 'Stok ID' ) TO GT_FCAT.
+*APPEND VALUE #( FIELDNAME = 'STOCK_NAME' COLTEXT = 'Stok Ad#' ) TO GT_FCAT.
+*APPEND VALUE #( FIELDNAME = 'STOCK_QTY'  COLTEXT = 'Adet' ) TO GT_FCAT.
+*APPEND VALUE #( FIELDNAME = 'STOCK_SELL' COLTEXT = 'Sat## Fiyat#' ) TO GT_FCAT.
+*
+*CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+* EXPORTING
+**   I_STRUCTURE_NAME             = 'ZON_STOK_LIST'
+*   I_INTERNAL_TABNAME           = 'GT_STOCK'
+*  CHANGING
+*    CT_FIELDCAT                  = GT_FCAT
+* EXCEPTIONS
+*   INCONSISTENT_INTERFACE       = 1
+*   PROGRAM_ERROR                = 2
+*   OTHERS                       = 3
+*          .
+*IF SY-SUBRC <> 0.
+** Implement suitable error handling here
+*ENDIF.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM SET_LAYOUT .
+CLEAR GS_LAYOUT.
+GS_LAYOUT-CWIDTH_OPT = ABAP_TRUE.
+GS_LAYOUT-STYLEFNAME = 'CELL_STYLE'.
+*GS_LAYOUT-EDIT       = ABAP_TRUE.
+*GS_LAYOUT-NO_TOOLBAR = ABAP_TRUE.
+*GS_LAYOUT-ZEBRA      = ABAP_TRUE.
+*GS_LAYOUT-INFO_FNAME  = 'LINE_COLOR'.
+*GS_LAYOUT-CTAB_FNAME  = 'CELL_COLOR'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_TOTAL
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM GET_TOTAL .
+  """""""""""""""""""""""""""""""""""""""""""""""""""""
+  "PAI EKRANINDA &SAVE BUTONUNA BASTI#IMIZDA ÇALI#AN FORM.
+  DATA: LV_TOTAL TYPE INT4.
+  DATA: LV_TOTAL_C TYPE CHAR10.
+  DATA: LV_MSG TYPE CHAR200.
+*  DATA: LV_LINES TYPE INT4.
+*  DATA: LV_AVR TYPE INT4.
+
+ LOOP AT GT_STOCK INTO GS_STOCK.
+   LV_TOTAL = LV_TOTAL + GS_STOCK-STOCK_SELL * GS_STOCK-STOCK_QTY.  "BURADA M#KTARLA F#YATLARI ÇARPTIK STOKTAK# TOPLAM ÜRÜN F#YATINI HESAPLADIK.
+ ENDLOOP.
+
+ LV_TOTAL_C = LV_TOTAL.
+   CONCATENATE 'Toplam Sat#lacak Fiyat (KDV Hariç): '               "ÇIKAN SONUNU POPUP OLARAK EKRANA BASTIRIYORUZ.
+                LV_TOTAL_C
+                INTO LV_MSG.
+   MESSAGE LV_MSG TYPE 'I'.
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
+ "ICON YARATMAK #Ç#N
+* LOOP AT GT_STOCK INTO GS_STOCK .
+*    LV_TOTAL = LV_TOTAL + GS_STOCK-STOCK_SELL.
+* ENDLOOP.
+*
+* DESCRIBE TABLE GT_STOCK LINES LV_LINES.  " SATIRLARI SAYDIRDIK
+* LV_AVR = LV_TOTAL / LV_LINES.            " SAYDIRDI#IMIZ SATIRLARIN ORTALAMASINI ALDIK.
+*
+* LOOP AT GT_STOCK ASSIGNING <GFS_STOCK>.
+*   IF <GFS_STOCK>-STOCK_SELL > LV_AVR.     " F#YATI ORTALAMADAN YÜKSEK ÜRÜNLER YE##L YANACAK
+*     <GFS_STOCK>-DURUM = '@08@'.
+*   ELSEIF <GFS_STOCK>-STOCK_SELL < LV_AVR. " F#YATI ORTALAMADAN DÜ#ÜK ÜRÜNLER KIRMIZI YANACAK
+*     <GFS_STOCK>-DURUM = '@0A@'.
+*   ELSE.                                   " F#YATI ORTALAMA ÜRÜNLER SARI YANACAK
+*     <GFS_STOCK>-DURUM = '@09@'.
+*   ENDIF.
+*  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_DROPDOWN
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM SET_DROPDOWN .
+  "DISPLAY ALV'N#N #Ç#NDEK# PERFORM ETT###M#Z DROPDOWN #Ç#N VER#LER.
+DATA:  LT_DROPDOWN TYPE LVC_T_DROP,
+       LS_DROPDOWN TYPE LVC_S_DROP.
+"---
+CLEAR: LS_DROPDOWN.
+LS_DROPDOWN-HANDLE = 1.
+LS_DROPDOWN-VALUE  = 'Aktif'.
+APPEND LS_DROPDOWN TO LT_DROPDOWN.
+CLEAR: LS_DROPDOWN.
+LS_DROPDOWN-HANDLE = 1.
+LS_DROPDOWN-VALUE  = 'Pasif'.
+APPEND LS_DROPDOWN TO LT_DROPDOWN.
+"---
+CLEAR: LS_DROPDOWN.
+LS_DROPDOWN-HANDLE = 2.
+LS_DROPDOWN-VALUE  = 'Çok Sat#lan'.
+APPEND LS_DROPDOWN TO LT_DROPDOWN.
+CLEAR: LS_DROPDOWN.
+LS_DROPDOWN-HANDLE = 2.
+LS_DROPDOWN-VALUE  = 'Az Sat#lan'.
+APPEND LS_DROPDOWN TO LT_DROPDOWN.
+"---
+CLEAR: LS_DROPDOWN.
+LS_DROPDOWN-HANDLE = 3.
+LS_DROPDOWN-VALUE  = 'Hiç Sat#lmayan'.
+APPEND LS_DROPDOWN TO LT_DROPDOWN.
+CLEAR: LS_DROPDOWN.
+LS_DROPDOWN-HANDLE = 3.
+LS_DROPDOWN-VALUE  = 'Üretimden Kalkan'.
+APPEND LS_DROPDOWN TO LT_DROPDOWN.
+"---
+CLEAR: LS_DROPDOWN.
+LS_DROPDOWN-HANDLE = 4.
+LS_DROPDOWN-VALUE  = 'MRK'.
+APPEND LS_DROPDOWN TO LT_DROPDOWN.
+CLEAR: LS_DROPDOWN.
+LS_DROPDOWN-HANDLE = 4.
+LS_DROPDOWN-VALUE  = 'AVR'.
+APPEND LS_DROPDOWN TO LT_DROPDOWN.
+CLEAR: LS_DROPDOWN.
+LS_DROPDOWN-HANDLE = 4.
+LS_DROPDOWN-VALUE  = 'ASY'.
+APPEND LS_DROPDOWN TO LT_DROPDOWN.
+
+
+GO_ALV->SET_DROP_DOWN_TABLE(
+  EXPORTING
+    IT_DROP_DOWN       =     LT_DROPDOWN ).
+
+ENDFORM.
