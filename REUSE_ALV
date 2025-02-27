@@ -1,0 +1,179 @@
+*&---------------------------------------------------------------------*
+*& Report ZON_REUSE_ALV
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZON_REUSE_ALV.
+"  SENARYO:
+"   Ekko ve Ekpo tablolar#ndan baz# seçti#imiz kolonlar# ça##r#p rapor olu#turmak istiyoruz.
+" Seçti#imiz kolonlardan bir excel tablosu gibi tablo olu#turup bu tablo üzerinde inceleme yapaca##z.
+" Yani ki farkl# tablodan belli kolonlar ça##r#lacak ve tek bir  tablo gibi gösterilecek.
+"
+"  ÇÖZÜM:
+"   Sanal(internal) bir tablo olu#turup, herk iki tablodan verileri bu tablo üzerine yazaca##z.
+" Data tan#mlamalar#m#z# bu sanal (internal)tabloya göre yapmam#z gerekiyor.
+" Bu tabloya ayn# zamanda kullan#c# dostu bir görünüm vermeliyiz. Göze hitap etmeli.
+
+
+
+
+
+
+"                   ----------*EKKO VE EKPO TABLOLARI ÜZER#NDE ÇALI#IYORUZ*----------
+"       -----EKKO VE EKPO TABLOLARINDAN SEÇT###M#Z KOLONLARI TEK B#R TABLODA GÖSTERMEK #ST#YORUZ-----
+
+***** INTERNAL TABLE OLU#TURACA#IZ *****
+TYPES:
+BEGIN OF GTY_LIST,
+  EBELN TYPE EBELN,
+  EBELP TYPE EBELP,
+  BSTYP TYPE EBSTYP,
+  BSART TYPE ESART,
+  MATNR TYPE MATNR,
+  MENGE TYPE BSTMG,
+END OF GTY_LIST.
+
+DATA: GT_LIST TYPE TABLE OF GTY_LIST,
+      GS_LIST TYPE GTY_LIST.
+
+
+***** FIELD CATALOG OLU#TURACA#IZ *****
+DATA: GT_FIELDCATALOG TYPE SLIS_T_FIELDCAT_ALV,
+      GS_FIELDCATALOG TYPE SLIS_FIELDCAT_ALV.
+
+***** LAYOUT OLU#TURACA#IZ *****
+
+DATA: GS_LAYOUT TYPE SLIS_LAYOUT_ALV.
+
+
+
+
+
+
+START-OF-SELECTION.
+
+***** TABLOLARDAN KOLONLARI SEÇ#P EKRANA GET#R#YORUZ *****
+SELECT
+  EKKO~EBELN
+  EKPO~EBELP
+  EKKO~BSTYP
+  EKKO~BSART
+  EKPO~MATNR
+  EKPO~MENGE
+  FROM EKKO
+  INNER JOIN EKPO ON EKPO~EBELN EQ EKKO~EBELN
+  INTO TABLE GT_LIST.
+
+***** FIELD CATALOGDA KOLONLARI EKL#YORUZ *****
+  CLEAR:GS_FIELDCATALOG.
+  GS_FIELDCATALOG-FIELDNAME  = 'EBELN'.
+  GS_FIELDCATALOG-SELTEXT_S  = 'SAS No'.
+  GS_FIELDCATALOG-SELTEXT_M  = 'SAS Numaras#'.
+  GS_FIELDCATALOG-SELTEXT_L  = 'SAS Numaras#'.
+  GS_FIELDCATALOG-KEY        = ABAP_TRUE.
+  GS_FIELDCATALOG-COL_POS    = 0.         "tablodaki pozisyon s#ras#
+  "GS_FIELDCATALOG-OUTPUTLEN = 40.        "kolonun yaz# uzunlu#u
+  "GS_FIELDCATALOG-EDIT      = abap_true. "kolonun editlenebilir olup olmad###
+  GS_FIELDCATALOG-HOTSPOT    = ABAP_TRUE. "t#klanan yerin i#aretlenmesi
+  APPEND GS_FIELDCATALOG TO GT_FIELDCATALOG.
+
+  CLEAR:GS_FIELDCATALOG.
+  GS_FIELDCATALOG-FIELDNAME = 'EBELP'.
+  GS_FIELDCATALOG-SELTEXT_S = 'Kalem'.
+  GS_FIELDCATALOG-SELTEXT_M = 'Kalem'.
+  GS_FIELDCATALOG-SELTEXT_L = 'Kalem'.
+  GS_FIELDCATALOG-KEY       = ABAP_TRUE.
+  GS_FIELDCATALOG-COL_POS   = 1.
+  APPEND GS_FIELDCATALOG TO GT_FIELDCATALOG.
+
+  CLEAR:GS_FIELDCATALOG.
+  GS_FIELDCATALOG-FIELDNAME = 'BSTYP'.
+  GS_FIELDCATALOG-SELTEXT_S = 'Belge Tipi'.
+  GS_FIELDCATALOG-SELTEXT_M = 'Belge Tipi'.
+  GS_FIELDCATALOG-SELTEXT_L = 'Belge Tipi'.
+  GS_FIELDCATALOG-COL_POS   = 2.
+  APPEND GS_FIELDCATALOG TO GT_FIELDCATALOG.
+
+  CLEAR:GS_FIELDCATALOG.
+  GS_FIELDCATALOG-FIELDNAME = 'BSART'.
+  GS_FIELDCATALOG-SELTEXT_S = 'Belge Türü'.
+  GS_FIELDCATALOG-SELTEXT_M = 'Belge Türü'.
+  GS_FIELDCATALOG-SELTEXT_L = 'Belge Türü'.
+  GS_FIELDCATALOG-COL_POS   = 4.
+  APPEND GS_FIELDCATALOG TO GT_FIELDCATALOG.
+
+  CLEAR:GS_FIELDCATALOG.
+  GS_FIELDCATALOG-FIELDNAME = 'MATNR'.
+  GS_FIELDCATALOG-SELTEXT_S = 'Mlz No'.
+  GS_FIELDCATALOG-SELTEXT_M = 'Malzeme No'.
+  GS_FIELDCATALOG-SELTEXT_L = 'Malzeme No'.
+  GS_FIELDCATALOG-COL_POS   = 5.
+  APPEND GS_FIELDCATALOG TO GT_FIELDCATALOG.
+
+  CLEAR:GS_FIELDCATALOG.
+  GS_FIELDCATALOG-FIELDNAME = 'MENGE'.
+  GS_FIELDCATALOG-SELTEXT_S = 'Miktar'.
+  GS_FIELDCATALOG-SELTEXT_M = 'Miktar'.
+  GS_FIELDCATALOG-SELTEXT_L = 'Miktar'.
+  GS_FIELDCATALOG-COL_POS   = 6.
+  GS_FIELDCATALOG-DO_SUM    = abap_true. "kolonu topluyoruz.
+  APPEND GS_FIELDCATALOG TO GT_FIELDCATALOG.
+
+
+***** TABLONUN BA#LIK ADINI DE###T#R#YORUZ *****
+  GS_LAYOUT-WINDOW_TITLEBAR    = 'REUSE ALV MM RAPORU'.
+  GS_LAYOUT-ZEBRA              = ABAP_TRUE. " TABLO ZEBRA GÖRÜNTÜSÜ ALIYOR KOLAY BAKMAK #Ç#N
+  GS_LAYOUT-COLWIDTH_OPTIMIZE  = ABAP_TRUE. " KOLONLARIN UZUNLU#UNU OPTIMIZE EDER
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+ EXPORTING
+*   I_INTERFACE_CHECK                 = ' '
+*   I_BYPASSING_BUFFER                = ' '
+*   I_BUFFER_ACTIVE                   = ' '
+*   I_CALLBACK_PROGRAM                = ' '
+*   I_CALLBACK_PF_STATUS_SET          = ' '
+*   I_CALLBACK_USER_COMMAND           = ' '
+*   I_CALLBACK_TOP_OF_PAGE            = ' '
+*   I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*   I_CALLBACK_HTML_END_OF_LIST       = ' '
+*   I_STRUCTURE_NAME                  =
+*   I_BACKGROUND_ID                   = ' '
+*   I_GRID_TITLE                      =
+*   I_GRID_SETTINGS                   =
+   IS_LAYOUT                          = GS_LAYOUT
+   IT_FIELDCAT                        = GT_FIELDCATALOG
+*   IT_EXCLUDING                      =
+*   IT_SPECIAL_GROUPS                 =
+*   IT_SORT                           =
+*   IT_FILTER                         =
+*   IS_SEL_HIDE                       =
+*   I_DEFAULT                         = 'X'
+*   I_SAVE                            = ' '
+*   IS_VARIANT                        =
+*   IT_EVENTS                         =
+*   IT_EVENT_EXIT                     =
+*   IS_PRINT                          =
+*   IS_REPREP_ID                      =
+*   I_SCREEN_START_COLUMN             = 0
+*   I_SCREEN_START_LINE               = 0
+*   I_SCREEN_END_COLUMN               = 0
+*   I_SCREEN_END_LINE                 = 0
+*   I_HTML_HEIGHT_TOP                 = 0
+*   I_HTML_HEIGHT_END                 = 0
+*   IT_ALV_GRAPHICS                   =
+*   IT_HYPERLINK                      =
+*   IT_ADD_FIELDCAT                   =
+*   IT_EXCEPT_QINFO                   =
+*   IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER           =
+*   ES_EXIT_CAUSED_BY_USER            =
+  TABLES
+    T_OUTTAB                          = GT_LIST
+* EXCEPTIONS
+*   PROGRAM_ERROR                     = 1
+*   OTHERS                            = 2
+          .
+IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+ENDIF.
