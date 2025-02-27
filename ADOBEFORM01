@@ -1,0 +1,67 @@
+*&---------------------------------------------------------------------*
+*& Report ZON_ADOBEFORM_01
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZON_ADOBEFORM_01.
+
+DATA: GS_OUTPUTPARAMS TYPE SFPOUTPUTPARAMS,
+      GV_NAME         TYPE FPNAME,
+      GV_FUNCNAME     TYPE FUNCNAME,
+      GS_DOCPARAMS    TYPE SFPDOCPARAMS,
+      GS_FORMOUTPUT   TYPE FPFORMOUTPUT,
+      GV_BARCODE      TYPE CHAR10.
+
+
+
+
+
+
+
+START-OF-SELECTION.
+
+GV_BARCODE = 'STKRPR0001'.
+
+
+GS_OUTPUTPARAMS-NODIALOG = ABAP_TRUE.
+GS_OUTPUTPARAMS-PREVIEW  = ABAP_TRUE.
+GS_OUTPUTPARAMS-DEST     = 'LP01'.
+CALL FUNCTION 'FP_JOB_OPEN'
+  CHANGING
+    IE_OUTPUTPARAMS       = GS_OUTPUTPARAMS
+ EXCEPTIONS
+   CANCEL                 = 1
+   USAGE_ERROR            = 2
+   SYSTEM_ERROR           = 3
+   INTERNAL_ERROR         = 4
+   OTHERS                 = 5.
+
+GV_NAME = 'ZON_ADOBE_FORM01'.
+
+CALL FUNCTION 'FP_FUNCTION_MODULE_NAME'
+  EXPORTING
+    I_NAME                     = GV_NAME
+ IMPORTING
+    E_FUNCNAME                 = GV_FUNCNAME
+*   E_INTERFACE_TYPE           =
+*   EV_FUNCNAME_INBOUND        =
+          .
+CALL FUNCTION GV_FUNCNAME
+ EXPORTING
+   /1BCDWB/DOCPARAMS        = GS_DOCPARAMS
+   IV_BARCODE               = GV_BARCODE
+*   IV_HEADER_T1             =
+ IMPORTING
+   /1BCDWB/FORMOUTPUT       = GS_FORMOUTPUT
+ EXCEPTIONS
+   USAGE_ERROR              = 1
+   SYSTEM_ERROR             = 2
+   INTERNAL_ERROR           = 3
+   OTHERS                   = 4.
+
+CALL FUNCTION 'FP_JOB_CLOSE'
+ EXCEPTIONS
+   USAGE_ERROR          = 1
+   SYSTEM_ERROR         = 2
+   INTERNAL_ERROR       = 3
+   OTHERS               = 4.
