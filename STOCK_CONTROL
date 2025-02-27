@@ -1,0 +1,77 @@
+*&---------------------------------------------------------------------*
+*& Report ZON_STOK_CONTROL
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZON_STOK_CONTROL.
+
+
+TABLES:ZON_STOK_LIST.
+
+PARAMETERS: P_RAD1 RADIOBUTTON GROUP RGR1 DEFAULT 'X' USER-COMMAND USR1,
+            P_RAD2 RADIOBUTTON GROUP RGR1.
+
+PARAMETERS: P_ID TYPE Z_STOCK_ID       MODIF ID GR1,
+            P_NAME TYPE Z_STOCK_NAME   MODIF ID GR2.
+
+DATA: LT_RESULTS TYPE TABLE OF ZON_STOK_LIST,
+      WA_RESULT TYPE ZON_STOK_LIST.
+
+
+
+AT SELECTION-SCREEN OUTPUT.
+  LOOP AT SCREEN.
+    IF P_RAD1 EQ ABAP_TRUE.
+      IF SCREEN-GROUP1 EQ 'GR1'.
+        SCREEN-ACTIVE = 1.
+        MODIFY SCREEN.
+      ENDIF.
+      IF SCREEN-GROUP1 EQ 'GR2'.
+        SCREEN-ACTIVE = 0.
+        MODIFY SCREEN.
+      ENDIF.
+     ENDIF.
+   IF P_RAD2 EQ ABAP_TRUE.
+      IF SCREEN-GROUP1 EQ 'GR2'.
+        SCREEN-ACTIVE = 1.
+        MODIFY SCREEN.
+      ENDIF.
+      IF SCREEN-GROUP1 EQ 'GR1'.
+        SCREEN-ACTIVE = 0.
+        MODIFY SCREEN.
+      ENDIF.
+     ENDIF.
+  ENDLOOP.
+
+
+START-OF-SELECTION.
+  " Kullan#c#n#n seçimine göre arama yapma
+ SELECTION-SCREEN BEGIN OF BLOCK BL11 WITH FRAME.
+  IF P_RAD1 = 'X'. " ID'ye göre arama
+    SELECT *
+      INTO TABLE LT_RESULTS
+      FROM ZON_STOK_LIST
+      WHERE STOCK_ID = P_ID.
+
+  ELSEIF P_RAD2 = 'X'. " Name'e göre arama
+    SELECT *
+      INTO TABLE LT_RESULTS
+      FROM ZON_STOK_LIST
+      WHERE STOCK_NAME = P_NAME.
+  ENDIF.
+
+  " Sonuçlar# kontrol et ve listele
+  IF LT_RESULTS IS INITIAL.
+    WRITE: / 'Arama kriterlerine uygun kay#t bulunamad#.'.
+  ELSE.
+    WRITE: / 'Arama sonuçlar#: '.
+    LOOP AT LT_RESULTS INTO WA_RESULT.
+      WRITE: / 'STOCK_ID: ', WA_RESULT-STOCK_ID,
+             / 'STOCK_NAME: ', WA_RESULT-STOCK_NAME,
+             / 'STOCK_QTY: ', WA_RESULT-STOCK_QTY,
+             / 'STOCK_LOC: ', WA_RESULT-STOCK_LOC,
+             / 'STOCK_PRICE: ', WA_RESULT-STOCK_PRICE.
+      ULINE.
+    ENDLOOP.
+  ENDIF.
+  SELECTION-SCREEN END OF BLOCK BL11.
